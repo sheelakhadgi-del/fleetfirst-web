@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Profile — FleetFirst{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-5">
+  <div class="card mb-3">
+    <div class="card-header">Account Info</div>
+    <div class="card-body">
+      <table class="table table-sm table-borderless mb-0">
+        <tr><th>Name</th><td>{{ current_user.name or '—' }}</td></tr>
+        <tr><th>Email</th><td>{{ current_user.email }}</td></tr>
+        <tr><th>Role</th><td><span class="badge bg-{{ 'danger' if current_user.role == 'admin' else 'secondary' }}">{{ current_user.role }}</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">Change Password</div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Current Password</label>
+          <input type="password" name="current_password" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">New Password</label>
+          <input type="password" name="new_password" class="form-control" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

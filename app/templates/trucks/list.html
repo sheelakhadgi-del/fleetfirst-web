@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Trucks — FleetFirst{% endblock %}
+{% block page_title %}Truck Inventory{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="btn-group">
+    <a href="{{ url_for('trucks.list_trucks') }}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+    <a href="{{ url_for('trucks.list_trucks', status='LEASED') }}" class="btn btn-sm {% if status_filter == 'LEASED' %}btn-success{% else %}btn-outline-secondary{% endif %}">Leased</a>
+    <a href="{{ url_for('trucks.list_trucks', status='AVAILABLE') }}" class="btn btn-sm {% if status_filter == 'AVAILABLE' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Available</a>
+    <a href="{{ url_for('trucks.list_trucks', status='REPOSSESSED') }}" class="btn btn-sm {% if status_filter == 'REPOSSESSED' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Repossessed</a>
+  </div>
+  <a href="{{ url_for('trucks.add') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Truck</a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th>Truck ID</th>
+        <th>VIN</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Driver</th>
+        <th>Lease Start</th>
+        <th>Balance</th>
+        <th>Weekly Pmt</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      {% for truck in trucks %}
+      {% set lease = truck.active_lease %}
+      <tr>
+        <td class="fw-semibold">
+          <a href="{{ url_for('trucks.detail', vin=truck.vin) }}" class="text-decoration-none">
+            {{ truck.truck_id or '—' }}
+          </a>
+        </td>
+        <td style="font-size:.8rem; font-family:monospace;">{{ truck.vin }}</td>
+        <td style="font-size:.85rem;">{{ truck.description or '—' }}</td>
+        <td>
+          {% if truck.status == 'LEASED' %}
+            <span class="badge badge-status-leased">Leased</span>
+          {% elif truck.status == 'AVAILABLE' %}
+            <span class="badge badge-status-available">Available</span>
+          {% else %}
+            <span class="badge badge-status-repossessed">Repossessed</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.85rem;">{{ lease.driver_name if lease else '—' }}</td>
+        <td style="font-size:.85rem;">{{ lease.lease_start.strftime('%m/%d/%y') if lease else '—' }}</td>
+        <td class="fw-semibold" style="font-size:.85rem;">{{ lease.estimated_balance | currency if lease else '—' }}</td>
+        <td style="font-size:.85rem;">{{ lease.weekly_payment | currency if lease else '—' }}</td>
+        <td>
+          <a href="{{ url_for('trucks.detail', vin=truck.vin) }}" class="btn btn-sm btn-outline-secondary">View</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted py-4">No trucks found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Users — FleetFirst{% endblock %}
+{% block page_title %}Team Users{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <a href="{{ url_for('auth.add_user') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i>Add User
+  </a>
+</div>
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.name or '—' }}</td>
+      <td>{{ u.email }}</td>
+      <td><span class="badge bg-{{ 'danger' if u.role == 'admin' else 'secondary' }}">{{ u.role }}</span></td>
+      <td style="font-size:.85rem;">{{ u.created_at.strftime('%m/%d/%Y') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

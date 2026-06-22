@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Add User — FleetFirst{% endblock %}
+{% block page_title %}Add Team Member{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-5">
+<form method="POST">
+  <div class="card">
+    <div class="card-header">New User</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" required minlength="6">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Role</label>
+          <select name="role" class="form-select">
+            <option value="accountant">Accountant</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Create User</button>
+      <a href="{{ url_for('auth.users') }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+</form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Repossessions — FleetFirst{% endblock %}
+{% block page_title %}Repossessions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <a href="{{ url_for('repos.new_repo') }}" class="btn btn-danger btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Record Repossession
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th>Repo Date</th>
+        <th>Truck</th>
+        <th>Driver</th>
+        <th>Principal Bal.</th>
+        <th>Interest Bal.</th>
+        <th>Book Value</th>
+        <th>Gain / Loss</th>
+        <th>JE</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      {% for repo in repos %}
+      <tr>
+        <td>{{ repo.repo_date.strftime('%m/%d/%Y') }}</td>
+        <td>
+          <a href="{{ url_for('trucks.detail', vin=repo.truck.vin) }}" class="text-decoration-none fw-semibold">
+            {{ repo.truck.truck_id }}
+          </a>
+          <div class="text-muted" style="font-size:.75rem;">{{ repo.truck.vin }}</div>
+        </td>
+        <td style="font-size:.85rem;">{{ repo.lease.driver_name or '—' }}</td>
+        <td style="font-size:.85rem;">{{ repo.principal_balance | currency }}</td>
+        <td style="font-size:.85rem;">{{ repo.interest_balance | currency }}</td>
+        <td style="font-size:.85rem;">{{ repo.book_value | currency }}</td>
+        <td class="fw-semibold {{ 'gain' if repo.gain_loss >= 0 else 'loss' }}">
+          {{ repo.gain_loss | signed_currency }}
+        </td>
+        <td>
+          {% if repo.je_exported %}
+            <span class="badge bg-success">Exported</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('repos.detail', repo_id=repo.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted py-4">No repossessions recorded.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

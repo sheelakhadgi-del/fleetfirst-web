@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Depreciation Schedule — FleetFirst{% endblock %}
+{% block page_title %}Accumulated Depreciation Schedule{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+  <form class="d-flex gap-2 align-items-center" method="get">
+    <label class="text-muted small mb-0">As of:</label>
+    <input type="date" name="as_of" class="form-control form-control-sm" style="width:160px"
+           value="{{ as_of.strftime('%Y-%m-%d') }}">
+    <button class="btn btn-sm btn-secondary">Update</button>
+  </form>
+
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <!-- Monthly JE Export -->
+    <form class="d-flex gap-1 align-items-center" method="get"
+          action="{{ url_for('depreciation.export_je') }}">
+      <label class="text-muted small mb-0 me-1">Month JE:</label>
+      <select name="year" class="form-select form-select-sm" style="width:90px">
+        {% for y in range(2025, as_of.year + 2) %}
+        <option value="{{ y }}" {% if y == as_of.year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <select name="month" class="form-select form-select-sm" style="width:120px">
+        {% set month_names = ['January','February','March','April','May','June',
+                               'July','August','September','October','November','December'] %}
+        {% for i in range(1, 13) %}
+        <option value="{{ i }}" {% if i == as_of.month %}selected{% endif %}>{{ month_names[i-1] }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-sm btn-success">
+        <i class="bi bi-journal-check"></i> Export JE for QBO
+      </button>
+    </form>
+
+    <a href="{{ url_for('depreciation.export_csv', as_of=as_of.strftime('%Y-%m-%d')) }}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-download"></i> Full Schedule CSV
+    </a>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-label">Total Assets</div>
+      <div class="stat-value">{{ (schedule.rows_1504|length + schedule.rows_1950|length) }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-label">Monthly Depreciation</div>
+      <div class="stat-value" style="font-size:1.3rem">{{ schedule.totals.monthly | currency }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-label">Accum. Depreciation</div>
+      <div class="stat-value" style="font-size:1.3rem">{{ schedule.totals.accumulated | currency }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-label">Net Book Value</div>
+      <div class="stat-value" style="font-size:1.3rem">{{ schedule.totals.book_value | currency }}</div>
+    </div>
+  </div>
+</div>
+
+{% if not schedule.rows_1504 and not schedule.rows_1950 %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-graph-down" style="font-size:2rem"></i>
+    <p class="mt-2 mb-3">No depreciation data yet. Add depreciation periods to trucks to get started.</p>
+    <a href="{{ url_for('trucks.list_trucks') }}" class="btn btn-primary btn-sm">Go to Trucks</a>
+  </div>
+</div>
+{% else %}
+
+{% set months = schedule.months %}
+
+<!-- 1504 Fixed Assets -->
+{% if schedule.rows_1504 %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-building"></i> 1504 — Fixed Assets (Purchased Trucks)</span>
+    <span class="text-muted small">{{ schedule.rows_1504|length }} trucks</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="table table-sm table-hover mb-0 small" style="white-space:nowrap">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:160px">Truck</th>
+          <th>Acq Date</th>
+          <th class="text-end">Cost Basis</th>
+          <th class="text-end">Residual</th>
+          <th class="text-end">Mo. Depr</th>
+          {% for y, m in months %}
+          <th class="text-end">{{ "%02d/%02d"|format(m, y % 100) }}</th>
+          {% endfor %}
+          <th class="text-end">Accum Depr</th>
+          <th class="text-end">Book Value</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in schedule.rows_1504 %}
+        <tr>
+          <td>
+            <a href="{{ url_for('depreciation.truck_detail', truck_id=row.truck.id) }}" class="text-decoration-none fw-semibold">
+              {{ row.truck.truck_id or row.truck.vin[:10] }}
+            </a>
+            {% if row.periods|length > 1 %}
+            <span class="badge bg-warning text-dark ms-1" title="Re-seated">RS</span>
+            {% endif %}
+            <div class="text-muted" style="font-size:0.75rem">{{ row.truck.description or '' }}</div>
+          </td>
+          <td>{{ row.periods[0].start_date.strftime('%m/%d/%y') }}</td>
+          <td class="text-end">{{ row.periods[-1].cost_basis | currency }}</td>
+          <td class="text-end">{{ row.periods[-1].residual_value | currency }}</td>
+          <td class="text-end fw-semibold">{{ row.monthly_depreciation | currency }}</td>
+          {% for ym in months %}
+          <td class="text-end">{{ row.monthly_amounts.get(ym, 0) | currency }}</td>
+          {% endfor %}
+          <td class="text-end text-danger">{{ row.accumulated_depreciation | currency }}</td>
+          <td class="text-end fw-semibold">{{ row.book_value | currency }}</td>
+          <td>
+            <a href="{{ url_for('depreciation.truck_detail', truck_id=row.truck.id) }}"
+               class="btn btn-xs btn-outline-secondary" style="font-size:0.7rem;padding:1px 6px">Detail</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="5">1504 Subtotal</td>
+          {% for ym in months %}
+          <td class="text-end">
+            {{ schedule.rows_1504 | sum(attribute='monthly_amounts') }}
+          </td>
+          {% endfor %}
+          <td class="text-end text-danger">
+            {{ schedule.rows_1504 | map(attribute='accumulated_depreciation') | sum | currency }}
+          </td>
+          <td class="text-end">
+            {{ schedule.rows_1504 | map(attribute='book_value') | sum | currency }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- 1950 ROU Assets -->
+{% if schedule.rows_1950 %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-file-earmark-text"></i> 1950 — Right of Use Assets (Leased Trucks)</span>
+    <span class="text-muted small">{{ schedule.rows_1950|length }} trucks</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="table table-sm table-hover mb-0 small" style="white-space:nowrap">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:160px">Truck</th>
+          <th>Acq Date</th>
+          <th class="text-end">Cost Basis</th>
+          <th class="text-end">Residual</th>
+          <th class="text-end">Mo. Depr</th>
+          {% for y, m in months %}
+          <th class="text-end">{{ "%02d/%02d"|format(m, y % 100) }}</th>
+          {% endfor %}
+          <th class="text-end">Accum Depr</th>
+          <th class="text-end">Book Value</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in schedule.rows_1950 %}
+        <tr>
+          <td>
+            <a href="{{ url_for('depreciation.truck_detail', truck_id=row.truck.id) }}" class="text-decoration-none fw-semibold">
+              {{ row.truck.truck_id or row.truck.vin[:10] }}
+            </a>
+            {% if row.periods|length > 1 %}
+            <span class="badge bg-warning text-dark ms-1" title="Re-seated">RS</span>
+            {% endif %}
+            <div class="text-muted" style="font-size:0.75rem">{{ row.truck.description or '' }}</div>
+          </td>
+          <td>{{ row.periods[0].start_date.strftime('%m/%d/%y') }}</td>
+          <td class="text-end">{{ row.periods[-1].cost_basis | currency }}</td>
+          <td class="text-end">{{ row.periods[-1].residual_value | currency }}</td>
+          <td class="text-end fw-semibold">{{ row.monthly_depreciation | currency }}</td>
+          {% for ym in months %}
+          <td class="text-end">{{ row.monthly_amounts.get(ym, 0) | currency }}</td>
+          {% endfor %}
+          <td class="text-end text-danger">{{ row.accumulated_depreciation | currency }}</td>
+          <td class="text-end fw-semibold">{{ row.book_value | currency }}</td>
+          <td>
+            <a href="{{ url_for('depreciation.truck_detail', truck_id=row.truck.id) }}"
+               class="btn btn-xs btn-outline-secondary" style="font-size:0.7rem;padding:1px 6px">Detail</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Grand Total -->
+<div class="card border-dark">
+  <div class="card-body py-2">
+    <div class="row text-center">
+      <div class="col">
+        <div class="small text-muted">Total Monthly</div>
+        <div class="fw-bold">{{ schedule.totals.monthly | currency }}</div>
+      </div>
+      <div class="col">
+        <div class="small text-muted">Total Accumulated</div>
+        <div class="fw-bold text-danger">{{ schedule.totals.accumulated | currency }}</div>
+      </div>
+      <div class="col">
+        <div class="small text-muted">Total Net Book Value</div>
+        <div class="fw-bold">{{ schedule.totals.book_value | currency }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

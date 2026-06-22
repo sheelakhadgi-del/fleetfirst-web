@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Record Repossession — FleetFirst{% endblock %}
+{% block page_title %}Record Repossession{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+<form method="POST" id="repo-form">
+  <div class="card mb-3">
+    <div class="card-header">Truck Lookup</div>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">VIN <span class="text-danger">*</span></label>
+          <input type="text" name="vin" id="vin-input" class="form-control"
+            value="{{ truck.vin if truck else '' }}" placeholder="1XKYDP9X…" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Repo Date <span class="text-danger">*</span></label>
+          <input type="date" name="repo_date" id="repo-date" class="form-control" required
+            value="{{ prefill.get('repo_date', '') }}">
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-outline-primary w-100" id="calc-btn">
+            <i class="bi bi-calculator me-1"></i>Calculate
+          </button>
+        </div>
+      </div>
+
+      {% if truck %}
+      <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.85rem;">
+        <strong>{{ truck.truck_id }}</strong> — {{ truck.description }}<br>
+        Acq. Date: {{ truck.acquisition_date.strftime('%m/%d/%Y') if truck.acquisition_date else '—' }} &nbsp;|&nbsp;
+        Acq. Cost: {{ truck.acquisition_cost | currency }} &nbsp;|&nbsp;
+        Useful Life: {{ truck.useful_life_months }} months
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if lease %}
+  <div class="card mb-3">
+    <div class="card-header">Current Lease — {{ lease.driver_name }}</div>
+    <div class="card-body">
+      <div class="row g-2" style="font-size:.88rem;">
+        <div class="col-sm-4"><span class="text-muted">Driver:</span> {{ lease.driver_name }}</div>
+        <div class="col-sm-4"><span class="text-muted">Lease Start:</span> {{ lease.lease_start.strftime('%m/%d/%Y') }}</div>
+        <div class="col-sm-4"><span class="text-muted">Est. Balance:</span> <strong>{{ lease.estimated_balance | currency }}</strong></div>
+        <div class="col-sm-4"><span class="text-muted">Weekly Pmt:</span> {{ lease.weekly_payment | currency }}</div>
+        <div class="col-sm-4"><span class="text-muted">Total Collected:</span> {{ lease.total_collected | currency }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header">Repossession Amounts</div>
+    <div class="card-body">
+      <div id="calc-preview" class="alert alert-secondary py-2 mb-3" style="font-size:.85rem; display:none;">
+        <strong>Calculated:</strong>
+        Book Value: <span id="prev-bv">—</span> &nbsp;|&nbsp;
+        Months Depreciated: <span id="prev-months">—</span>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Principal Balance (1951) <span class="text-danger">*</span>
+            <small class="text-muted d-block">From Lease Receivable tab</small>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="principal_balance" id="principal-bal" class="form-control" step="0.01" required
+              value="{{ prefill.get('principal_balance', '') }}">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Interest Receivable (1223)
+            <small class="text-muted d-block">From Lease Receivable tab</small>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="interest_balance" class="form-control" step="0.01" value="0.00">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">FMV (optional)
+            <small class="text-muted d-block">Fair market value at repo</small>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="fmv" class="form-control" step="0.01">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Driver Deposit Forfeited (2602)</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="deposit_forfeited" class="form-control" step="0.01" value="0.00">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Maintenance Deposit Forfeited (2603)</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="maintenance_deposit" class="form-control" step="0.01" value="0.00">
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="2" placeholder="Reason for repo, location secured, etc."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-warning" style="font-size:.85rem;">
+    <i class="bi bi-info-circle me-1"></i>
+    Recording a repossession will:
+    set the lease to <strong>REPOSSESSED</strong>,
+    set the truck status to <strong>AVAILABLE</strong> (ready to re-lease),
+    and generate a QBO journal entry you can export from the repo detail page.
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-danger">Record Repossession</button>
+    <a href="{{ url_for('repos.list_repos') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('calc-btn').addEventListener('click', function() {
+  const vin = document.getElementById('vin-input').value.trim();
+  const repoDate = document.getElementById('repo-date').value;
+  if (!vin || !repoDate) { alert('Enter VIN and repo date first.'); return; }
+
+  fetch(`/repos/api/book-value?vin=${encodeURIComponent(vin)}&repo_date=${repoDate}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { alert(data.error); return; }
+      document.getElementById('prev-bv').textContent = '$' + data.book_value.toLocaleString('en-US', {minimumFractionDigits:2});
+      document.getElementById('prev-months').textContent = data.months_depreciated;
+      document.getElementById('calc-preview').style.display = 'block';
+      if (data.principal_balance && !document.getElementById('principal-bal').value) {
+        document.getElementById('principal-bal').value = data.principal_balance.toFixed(2);
+      }
+    })
+    .catch(() => alert('Could not calculate. Check VIN.'));
+});
+</script>
+{% endblock %}

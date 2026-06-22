@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ truck.truck_id }} — FleetFirst{% endblock %}
+{% block page_title %}{{ truck.truck_id or truck.vin }} — {{ truck.description or 'Truck Detail' }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- Truck info -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        Truck Info
+        <a href="{{ url_for('trucks.edit', vin=truck.vin) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th style="width:45%">Truck ID</th><td>{{ truck.truck_id or '—' }}</td></tr>
+          <tr><th>VIN</th><td style="font-family:monospace;font-size:.85rem;">{{ truck.vin }}</td></tr>
+          <tr><th>Description</th><td>{{ truck.description or '—' }}</td></tr>
+          <tr><th>Status</th><td>
+            {% if truck.status == 'LEASED' %}<span class="badge badge-status-leased">Leased</span>
+            {% elif truck.status == 'AVAILABLE' %}<span class="badge badge-status-available">Available</span>
+            {% else %}<span class="badge badge-status-repossessed">Repossessed</span>{% endif %}
+          </td></tr>
+          <tr><th>Asset Account</th><td>{{ truck.asset_account }}</td></tr>
+          <tr><th>Acq. Date</th><td>{{ truck.acquisition_date.strftime('%m/%d/%Y') if truck.acquisition_date else '—' }}</td></tr>
+          <tr><th>Acq. Cost</th><td>{{ truck.acquisition_cost | currency }}</td></tr>
+          <tr><th>Useful Life</th><td>{{ truck.useful_life_months }} months</td></tr>
+        </table>
+        {% if truck.notes %}
+        <hr class="my-2">
+        <small class="text-muted">{{ truck.notes }}</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-header">Actions</div>
+      <div class="card-body d-grid gap-2">
+        {% if truck.status == 'AVAILABLE' %}
+        <a href="{{ url_for('trucks.add_lease', vin=truck.vin) }}" class="btn btn-success">
+          <i class="bi bi-file-earmark-plus me-1"></i>Create New Lease
+        </a>
+        {% endif %}
+        {% if truck.status == 'LEASED' %}
+        <a href="{{ url_for('trucks.schedule_view', vin=truck.vin) }}" class="btn btn-outline-primary">
+          <i class="bi bi-table me-1"></i>View Amortization Schedule
+        </a>
+        <a href="{{ url_for('repos.new_repo', vin=truck.vin) }}" class="btn btn-outline-danger">
+          <i class="bi bi-exclamation-triangle me-1"></i>Record Repossession
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Active lease -->
+  <div class="col-lg-8">
+    {% if lease %}
+    <div class="card mb-3">
+      <div class="card-header">Current Lease — {{ lease.driver_name }}</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <table class="table table-sm table-borderless mb-0">
+              <tr><th style="width:50%">Driver</th><td>{{ lease.driver_name }}</td></tr>
+              <tr><th>Team</th><td>{{ lease.team_name or '—' }}</td></tr>
+              <tr><th>Team ID</th><td style="font-size:.8rem;">{{ lease.team_id or '—' }}</td></tr>
+              <tr><th>Lease Start</th><td>{{ lease.lease_start.strftime('%m/%d/%Y') }}</td></tr>
+              <tr><th>Term</th><td>{{ lease.term_months }} months ({{ lease.term_weeks }} weeks)</td></tr>
+            </table>
+          </div>
+          <div class="col-sm-6">
+            <table class="table table-sm table-borderless mb-0">
+              <tr><th style="width:50%">Initial Balance</th><td>{{ lease.initial_balance | currency }}</td></tr>
+              <tr><th>Weekly Payment</th><td>{{ lease.weekly_payment | currency }}</td></tr>
+              <tr><th>Annual Rate</th><td>{{ "%.2f"|format(lease.annual_rate * 100) }}%</td></tr>
+              <tr><th>Est. Balance</th><td class="fw-bold text-primary">{{ lease.estimated_balance | currency }}</td></tr>
+              <tr><th>Total Collected</th><td>{{ lease.total_collected | currency }}</td></tr>
+            </table>
+          </div>
+        </div>
+        {% if current_week %}
+        <hr class="my-2">
+        <div class="alert alert-info py-2 mb-0" style="font-size:.85rem;">
+          <strong>Current Week {{ current_week.week }}:</strong>
+          {{ current_week.start_date.strftime('%m/%d/%y') }}–{{ current_week.end_date.strftime('%m/%d/%y') }} &nbsp;|&nbsp;
+          Principal: <strong>{{ current_week.principal | currency }}</strong> &nbsp;|&nbsp;
+          Interest: <strong>{{ current_week.interest | currency }}</strong> &nbsp;|&nbsp;
+          Balance after: <strong>{{ current_week.balance | currency }}</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Payment history for this truck -->
+    <div class="card">
+      <div class="card-header">Payment History</div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Amount</th><th>Principal</th><th>Interest</th><th>JE Ref</th>
+          </tr></thead>
+          <tbody>
+          {% set all_payments = [] %}
+          {% for l in truck.leases %}
+            {% for p in l.payments %}
+              {% set _ = all_payments.append(p) %}
+            {% endfor %}
+          {% endfor %}
+          {% for p in all_payments | sort(attribute='payment_date', reverse=True) %}
+          <tr>
+            <td style="font-size:.82rem;">{{ p.payment_date.strftime('%m/%d/%y') }}</td>
+            <td>
+              {% if p.program == 'FLEET_FIRST_MAINTENANCE' %}
+                <span class="badge bg-secondary">Maint</span>
+              {% else %}
+                <span class="badge bg-success">Lease</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.82rem;">{{ p.amount | currency }}</td>
+            <td style="font-size:.82rem;">{{ p.principal | currency if p.principal else '—' }}</td>
+            <td style="font-size:.82rem;">{{ p.interest | currency if p.interest else '—' }}</td>
+            <td style="font-size:.78rem; font-family:monospace;">{{ p.je_ref or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-3">No payments recorded yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lease history -->
+    {% if truck.leases | length > 1 %}
+    <div class="card mt-3">
+      <div class="card-header">Lease History</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Driver</th><th>Start</th><th>Status</th><th>Balance</th></tr></thead>
+          <tbody>
+          {% for l in truck.leases | sort(attribute='lease_start', reverse=True) %}
+          <tr>
+            <td>{{ l.driver_name }}</td>
+            <td style="font-size:.85rem;">{{ l.lease_start.strftime('%m/%d/%Y') }}</td>
+            <td><span class="badge bg-{{ 'success' if l.status == 'ACTIVE' else 'secondary' }}">{{ l.status }}</span></td>
+            <td>{{ l.estimated_balance | currency }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Repossession history -->
+    {% if truck.repos %}
+    <div class="card mt-3">
+      <div class="card-header">Repossession History</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Repo Date</th><th>Principal Bal.</th><th>Book Value</th><th>Gain / Loss</th><th></th></tr></thead>
+          <tbody>
+          {% for r in truck.repos %}
+          <tr>
+            <td>{{ r.repo_date.strftime('%m/%d/%Y') }}</td>
+            <td>{{ r.principal_balance | currency }}</td>
+            <td>{{ r.book_value | currency }}</td>
+            <td class="{{ 'gain' if r.gain_loss >= 0 else 'loss' }}">{{ r.gain_loss | signed_currency }}</td>
+            <td><a href="{{ url_for('repos.detail', repo_id=r.id) }}" class="btn btn-sm btn-outline-secondary">View JE</a></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

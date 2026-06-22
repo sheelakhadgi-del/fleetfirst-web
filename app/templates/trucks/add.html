@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Add Truck — FleetFirst{% endblock %}
+{% block page_title %}Add Truck{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+<form method="POST">
+  <div class="card mb-3">
+    <div class="card-header">Truck Details</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">VIN <span class="text-danger">*</span></label>
+          <input type="text" name="vin" class="form-control" maxlength="17" required placeholder="1XKYDP9X…">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Truck ID</label>
+          <input type="text" name="truck_id" class="form-control" placeholder="J462765">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-control" placeholder="2022 Kenworth T680">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="AVAILABLE">Available</option>
+            <option value="LEASED">Leased</option>
+            <option value="REPOSSESSED">Repossessed</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Acquisition Date</label>
+          <input type="date" name="acquisition_date" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Acquisition Cost ($)</label>
+          <input type="number" name="acquisition_cost" class="form-control" step="0.01" placeholder="60550.00">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Useful Life (months)
+            <span class="text-muted" style="font-size:.75rem;">for depreciation</span>
+          </label>
+          <input type="number" name="useful_life_months" class="form-control" value="65" min="1">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Asset Account</label>
+          <select name="asset_account" class="form-select">
+            <option value="1504">1504 — Fixed Assets (Purchased)</option>
+            <option value="1950">1950 — Right of Use Assets (Leased from Pathway/Ryder)</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional: add lease at same time -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <div class="form-check mb-0">
+        <input class="form-check-input" type="checkbox" id="add_lease_check" name="add_lease" value="yes">
+        <label class="form-check-label fw-semibold" for="add_lease_check">Also create a lease for this truck</label>
+      </div>
+    </div>
+    <div class="card-body" id="lease_fields" style="display:none;">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Driver Name</label>
+          <input type="text" name="driver_name" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Team Name</label>
+          <input type="text" name="team_name" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Team ID <span class="text-muted" style="font-size:.75rem;">(from CloudTrucks/Looker)</span></label>
+          <input type="text" name="team_id" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Lease Start (First Payment Date)</label>
+          <input type="date" name="lease_start" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Term (months)</label>
+          <input type="number" name="term_months" class="form-control" value="32">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Initial Balance ($)</label>
+          <input type="number" name="initial_balance" class="form-control" step="0.01">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Weekly Payment ($)</label>
+          <input type="number" name="weekly_payment" class="form-control" step="0.01">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Annual Rate</label>
+          <input type="number" name="annual_rate" class="form-control" step="0.0001" value="0.1034">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Lease Notes</label>
+          <textarea name="lease_notes" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Save Truck</button>
+    <a href="{{ url_for('trucks.list_trucks') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('add_lease_check').addEventListener('change', function() {
+  document.getElementById('lease_fields').style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

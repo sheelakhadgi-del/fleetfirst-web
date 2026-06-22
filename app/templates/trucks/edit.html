@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ truck.truck_id }} — FleetFirst{% endblock %}
+{% block page_title %}Edit Truck — {{ truck.truck_id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<form method="POST">
+  <div class="card mb-3">
+    <div class="card-header">Truck Details</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label text-muted">VIN (cannot change)</label>
+          <input type="text" class="form-control" value="{{ truck.vin }}" disabled>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Truck ID</label>
+          <input type="text" name="truck_id" class="form-control" value="{{ truck.truck_id or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-control" value="{{ truck.description or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Acquisition Date</label>
+          <input type="date" name="acquisition_date" class="form-control"
+            value="{{ truck.acquisition_date.strftime('%Y-%m-%d') if truck.acquisition_date else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Acquisition Cost ($)</label>
+          <input type="number" name="acquisition_cost" class="form-control" step="0.01"
+            value="{{ truck.acquisition_cost or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Residual Value ($)</label>
+          <input type="number" name="residual_value" class="form-control" step="0.01"
+            value="{{ truck.residual_value or 5000 }}">
+          <div class="form-text">$5K most; $15K for J100031/40/45; $51,580 for Ryder/1950</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Useful Life (months)</label>
+          <input type="number" name="useful_life_months" class="form-control"
+            value="{{ truck.useful_life_months or 60 }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Asset Account</label>
+          <select name="asset_account" class="form-select">
+            <option value="1504" {% if truck.asset_account == '1504' %}selected{% endif %}>1504 — Fixed Assets</option>
+            <option value="1950" {% if truck.asset_account == '1950' %}selected{% endif %}>1950 — Right of Use Assets</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="2">{{ truck.notes or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('trucks.detail', vin=truck.vin) }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+</div>
+{% endblock %}

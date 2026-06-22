@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Add Depreciation Period — {{ truck.truck_id or truck.vin }}{% endblock %}
+{% block page_title %}Add Depreciation Period{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{{ url_for('depreciation.truck_detail', truck_id=truck.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card" style="max-width:600px">
+  <div class="card-header">
+    New Depreciation Period — {{ truck.truck_id or truck.vin }}
+    <span class="text-muted small ms-2">{{ truck.description or '' }}</span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Start Date <span class="text-danger">*</span></label>
+        <input type="date" name="start_date" class="form-control" required
+               value="{{ truck.acquisition_date.strftime('%Y-%m-%d') if truck.acquisition_date else '' }}">
+        <div class="form-text">Date asset placed in service. If day ≤ 15, full month depreciation; if > 15, starts following month.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Cost Basis <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="number" name="cost_basis" class="form-control" step="0.01" min="0" required
+                 value="{{ truck.acquisition_cost or '' }}">
+        </div>
+        <div class="form-text">Original cost or re-seat book value recorded in {{ truck.asset_account }}.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Residual Value</label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="number" name="residual_value" class="form-control" step="0.01" min="0"
+                 value="{{ truck.residual_value or 5000 }}">
+        </div>
+        <div class="form-text">$5,000 for most trucks; $15,000 for J100031/J100040/J100045; $51,580 for Ryder/1950 trucks.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Life (months)</label>
+        <input type="number" name="life_months" class="form-control" min="1" value="60" style="max-width:120px">
+        <div class="form-text">Always 60 per FleetFirst policy.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">End Date</label>
+        <input type="date" name="end_date" class="form-control" style="max-width:200px">
+        <div class="form-text">Leave blank if this is the current active period. Set only for re-seated/closed periods.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Notes</label>
+        <input type="text" name="notes" class="form-control" placeholder="e.g. Re-seat after repo 2025-09-15">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Add Period</button>
+        <a href="{{ url_for('depreciation.truck_detail', truck_id=truck.id) }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

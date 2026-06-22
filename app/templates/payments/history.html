@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Payment History — FleetFirst{% endblock %}
+{% block page_title %}Payment History{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<form method="GET" class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">VIN / Truck ID</label>
+        <input type="text" name="vin" class="form-control form-control-sm" value="{{ vin_filter }}" placeholder="Search VIN…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Type</label>
+        <select name="program" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="FLEET_FIRST_TRUCK_LEASE" {% if program_filter == 'FLEET_FIRST_TRUCK_LEASE' %}selected{% endif %}>Lease</option>
+          <option value="FLEET_FIRST_MAINTENANCE" {% if program_filter == 'FLEET_FIRST_MAINTENANCE' %}selected{% endif %}>Maintenance</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">From</label>
+        <input type="date" name="from" class="form-control form-control-sm" value="{{ date_from }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">To</label>
+        <input type="date" name="to" class="form-control form-control-sm" value="{{ date_to }}">
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="{{ url_for('payments.history') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead><tr>
+        <th>Date</th>
+        <th>Truck</th>
+        <th>Driver</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Principal</th>
+        <th>Interest</th>
+        <th>JE Ref</th>
+      </tr></thead>
+      <tbody>
+      {% for p in payments.items %}
+      <tr>
+        <td style="font-size:.82rem;">{{ p.payment_date.strftime('%m/%d/%Y') }}</td>
+        <td>
+          <a href="{{ url_for('trucks.detail', vin=p.lease.truck.vin) }}" class="text-decoration-none fw-semibold">
+            {{ p.lease.truck.truck_id or p.lease.truck.vin[-6:] }}
+          </a>
+        </td>
+        <td style="font-size:.82rem;">{{ p.lease.driver_name or '—' }}</td>
+        <td>
+          {% if p.program == 'FLEET_FIRST_MAINTENANCE' %}
+            <span class="badge bg-secondary">Maint</span>
+          {% else %}
+            <span class="badge bg-success">Lease</span>
+          {% endif %}
+        </td>
+        <td class="fw-semibold" style="font-size:.82rem;">{{ p.amount | currency }}</td>
+        <td style="font-size:.82rem;">{{ p.principal | currency if p.principal else '—' }}</td>
+        <td style="font-size:.82rem;">{{ p.interest | currency if p.interest else '—' }}</td>
+        <td style="font-size:.78rem; font-family:monospace;">{{ p.je_ref or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">No payments found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- Pagination -->
+  {% if payments.pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <small class="text-muted">Showing {{ payments.per_page * (payments.page-1) + 1 }}–{{ [payments.per_page * payments.page, payments.total] | min }} of {{ payments.total }}</small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if payments.has_prev %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('payments.history', page=payments.prev_num, vin=vin_filter, program=program_filter, **{'from': date_from, 'to': date_to}) }}">‹</a></li>
+        {% endif %}
+        {% for p in payments.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+          <li class="page-item {% if p == payments.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('payments.history', page=p, vin=vin_filter, program=program_filter, **{'from': date_from, 'to': date_to}) }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        {% if payments.has_next %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('payments.history', page=payments.next_num, vin=vin_filter, program=program_filter, **{'from': date_from, 'to': date_to}) }}">›</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

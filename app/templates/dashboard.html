@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FleetFirst{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-label">Total Lease Receivable</div>
+      <div class="stat-value">{{ total_receivable | currency }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-label">Active Leases</div>
+      <div class="stat-value">{{ truck_counts.LEASED }}</div>
+      <div class="text-muted" style="font-size:.8rem;">trucks currently leased</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-label">This Month — Interest Income</div>
+      <div class="stat-value">{{ monthly_interest | currency }}</div>
+      <div class="text-muted" style="font-size:.8rem;">principal {{ monthly_principal | currency }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-label">Trucks Available</div>
+      <div class="stat-value text-primary">{{ truck_counts.AVAILABLE }}</div>
+      <div class="text-muted" style="font-size:.8rem;">{{ truck_counts.REPOSSESSED }} repossessed</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Top active leases by balance -->
+  <div class="col-xl-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        Active Leases — Highest Balances
+        <a href="{{ url_for('trucks.list_trucks', status='LEASED') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr>
+            <th>Truck</th><th>Driver</th><th>Start</th><th>Balance</th><th>Weekly Pmt</th>
+          </tr></thead>
+          <tbody>
+          {% for lease in top_leases %}
+          <tr>
+            <td><a href="{{ url_for('trucks.detail', vin=lease.truck.vin) }}" class="fw-semibold text-decoration-none">{{ lease.truck.truck_id }}</a>
+              <div class="text-muted" style="font-size:.75rem;">{{ lease.truck.vin }}</div>
+            </td>
+            <td>{{ lease.driver_name or '—' }}<br>
+              <span class="text-muted" style="font-size:.75rem;">{{ lease.team_name or '' }}</span>
+            </td>
+            <td style="font-size:.85rem;">{{ lease.lease_start.strftime('%m/%d/%y') }}</td>
+            <td class="fw-semibold">{{ lease.estimated_balance | currency }}</td>
+            <td style="font-size:.85rem;">{{ lease.weekly_payment | currency }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted text-center py-3">No active leases</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent payments -->
+  <div class="col-xl-5">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        Recent Payments
+        <a href="{{ url_for('payments.history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Date</th><th>Truck</th><th>Amount</th><th>Type</th></tr></thead>
+          <tbody>
+          {% for p in recent_payments %}
+          <tr>
+            <td style="font-size:.82rem;">{{ p.payment_date.strftime('%m/%d/%y') }}</td>
+            <td style="font-size:.82rem;">
+              <a href="{{ url_for('trucks.detail', vin=p.lease.truck.vin) }}" class="text-decoration-none">
+                {{ p.lease.truck.truck_id or p.lease.truck.vin[-6:] }}
+              </a>
+            </td>
+            <td class="fw-semibold" style="font-size:.82rem;">{{ p.amount | currency }}</td>
+            <td>
+              {% if p.program == 'FLEET_FIRST_MAINTENANCE' %}
+              <span class="badge bg-secondary">Maint</span>
+              {% else %}
+              <span class="badge bg-success">Lease</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-muted text-center py-3">No payments yet</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card mt-3">
+      <div class="card-header">Quick Actions</div>
+      <div class="card-body d-grid gap-2">
+        <a href="{{ url_for('payments.upload') }}" class="btn btn-primary">
+          <i class="bi bi-upload me-2"></i>Upload Looker CSV
+        </a>
+        <a href="{{ url_for('trucks.add') }}" class="btn btn-outline-primary">
+          <i class="bi bi-plus-circle me-2"></i>Add Truck / New Lease
+        </a>
+        <a href="{{ url_for('repos.new_repo') }}" class="btn btn-outline-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Record Repossession
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

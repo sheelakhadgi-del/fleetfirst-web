@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Repo — {{ truck.truck_id }}{% endblock %}
+{% block page_title %}Repossession — {{ truck.truck_id }} ({{ repo.repo_date.strftime('%m/%d/%Y') }}){% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <!-- Summary -->
+    <div class="card mb-3">
+      <div class="card-header">Summary</div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th style="width:50%">Truck</th><td><a href="{{ url_for('trucks.detail', vin=truck.vin) }}">{{ truck.truck_id }}</a></td></tr>
+          <tr><th>VIN</th><td style="font-size:.8rem; font-family:monospace;">{{ truck.vin }}</td></tr>
+          <tr><th>Driver</th><td>{{ lease.driver_name }}</td></tr>
+          <tr><th>Repo Date</th><td>{{ repo.repo_date.strftime('%m/%d/%Y') }}</td></tr>
+          <tr><th>Acq. Cost</th><td>{{ truck.acquisition_cost | currency }}</td></tr>
+          <tr><th>Months Depreciated</th><td>{{ result.months_depreciated }}</td></tr>
+          <tr><th>Accum. Depreciation</th><td>{{ result.accumulated_depreciation | currency }}</td></tr>
+          <tr><th>Book Value</th><td class="fw-bold">{{ result.book_value | currency }}</td></tr>
+          <tr><td colspan="2"><hr class="my-1"></td></tr>
+          <tr><th>Principal Balance</th><td>{{ repo.principal_balance | currency }}</td></tr>
+          <tr><th>Interest Balance</th><td>{{ repo.interest_balance | currency }}</td></tr>
+          <tr><th>Deposit Forfeited</th><td>{{ repo.deposit_forfeited | currency }}</td></tr>
+          <tr><th>Maint. Deposit</th><td>{{ repo.maintenance_deposit | currency }}</td></tr>
+          <tr><td colspan="2"><hr class="my-1"></td></tr>
+          <tr><th>Gain / Loss</th>
+            <td class="fw-bold {{ 'gain' if result.gain_loss >= 0 else 'loss' }} fs-5">
+              {{ result.gain_loss | signed_currency }}
+            </td>
+          </tr>
+          {% if repo.fmv %}<tr><th>FMV</th><td>{{ repo.fmv | currency }}</td></tr>{% endif %}
+        </table>
+        {% if repo.notes %}<hr class="my-2"><small class="text-muted">{{ repo.notes }}</small>{% endif %}
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="card mb-3">
+      <div class="card-header">Export JE to QBO</div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.85rem;">
+          Download the journal entry CSV and import via<br>
+          <strong>QBO → Settings → Import Data → Journal Entries</strong>
+        </p>
+        <a href="{{ url_for('repos.export_je', repo_id=repo.id) }}" class="btn btn-primary w-100">
+          <i class="bi bi-download me-2"></i>Download QBO JE CSV
+        </a>
+        {% if repo.je_exported %}
+        <div class="text-success text-center mt-2" style="font-size:.82rem;">
+          <i class="bi bi-check-circle me-1"></i>Previously exported
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Repo expenses -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        Repo Expenses
+        <span class="fw-bold">{{ repo.total_expenses | currency }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+          <tbody>
+          {% for exp in repo.expenses %}
+          <tr>
+            <td style="font-size:.8rem;">{{ exp.expense_date.strftime('%m/%d/%y') if exp.expense_date else '—' }}</td>
+            <td style="font-size:.8rem;">{{ exp.description }}</td>
+            <td style="font-size:.8rem;">{{ exp.amount | currency }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted text-center py-2" style="font-size:.82rem;">No expenses yet</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer">
+        <form method="POST" action="{{ url_for('repos.add_expense', repo_id=repo.id) }}">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <input type="date" name="expense_date" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <input type="text" name="description" class="form-control form-control-sm" placeholder="Description" required>
+            </div>
+            <div class="col-md-2">
+              <input type="number" name="amount" class="form-control form-control-sm" step="0.01" placeholder="$0.00" required>
+            </div>
+            <div class="col-md-3">
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100">Add Expense</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- JE lines -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">Journal Entry Lines</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr>
+            <th>Account</th>
+            <th>Description</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+          </tr></thead>
+          <tbody>
+          {% set total_dr = namespace(v=0) %}
+          {% set total_cr = namespace(v=0) %}
+          {% for line in je_lines %}
+          <tr>
+            <td style="font-size:.83rem; font-weight:600;">{{ line.account }}</td>
+            <td style="font-size:.83rem;">{{ line.description }}</td>
+            <td class="text-end" style="font-size:.83rem;">
+              {% if line.debit != '' %}{{ line.debit | currency }}{% set _ = total_dr.__setattr__('v', total_dr.v + line.debit) %}{% endif %}
+            </td>
+            <td class="text-end" style="font-size:.83rem;">
+              {% if line.credit != '' %}{{ line.credit | currency }}{% set _ = total_cr.__setattr__('v', total_cr.v + line.credit) %}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <th colspan="2">Total</th>
+              <th class="text-end">{{ total_dr.v | currency }}</th>
+              <th class="text-end">{{ total_cr.v | currency }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% if result.gain_loss > 0 %}
+      <div class="card-footer text-success" style="font-size:.85rem;">
+        <i class="bi bi-arrow-up-circle me-1"></i><strong>Gain on Repossession: {{ result.gain_loss | currency }}</strong>
+        — Book value exceeds net receivable written off.
+      </div>
+      {% elif result.gain_loss < 0 %}
+      <div class="card-footer text-danger" style="font-size:.85rem;">
+        <i class="bi bi-arrow-down-circle me-1"></i><strong>Loss on Repossession: {{ result.gain_loss | signed_currency }}</strong>
+        — Net receivable written off exceeds book value.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

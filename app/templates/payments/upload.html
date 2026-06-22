@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Upload Payments — FleetFirst{% endblock %}
+{% block page_title %}Upload Looker CSV{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-7">
+  <div class="card mb-3">
+    <div class="card-header">Upload CloudTrucks Looker Export</div>
+    <div class="card-body">
+      <p class="text-muted" style="font-size:.9rem;">
+        Export the <strong>Fleet First - Truck Lease Payment by Day</strong> report from Looker,
+        then upload it here. The app will split each payment into principal &amp; interest,
+        and generate a QBO-ready journal entry CSV for you to download.
+      </p>
+      <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Select CSV file</label>
+          <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+          <div class="form-text">Expected columns: Payment Date, Team Name, Vendor Program, Subheader (VIN), Team ID, Payment Amount</div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-upload me-2"></i>Process &amp; Generate QBO Journal Entries
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">How it works</div>
+    <div class="card-body">
+      <ol class="mb-0" style="font-size:.88rem; line-height:2;">
+        <li>Each <strong>FLEET_FIRST_TRUCK_LEASE</strong> row → 3-line JE:<br>
+          Dr 1800 Due from CloudTrucks / Cr 1951 Lease Receivable (principal) / Cr 4300 Interest Income</li>
+        <li>Each <strong>FLEET_FIRST_MAINTENANCE</strong> row → 2-line JE:<br>
+          Dr 1800 Due from CloudTrucks / Cr 2603 Maintenance Deposit</li>
+        <li>Principal/interest split uses the weekly pro-rata from each truck's amortization schedule.</li>
+        <li>Duplicate payments (same truck, date, amount) are skipped automatically.</li>
+        <li>Download the output CSV and import via <strong>QBO → Settings → Import Data → Journal Entries</strong>.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
