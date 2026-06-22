@@ -2,7 +2,7 @@ services:
   - type: web
     name: fleetfirst-leasing
     env: python
-    buildCommand: pip install -r requirements.txt && flask db upgrade
+    buildCommand: pip install -r requirements.txt && python -c "from run import app; from app.models import db; app.app_context().__enter__(); db.create_all(); print('DB tables created.')"
     startCommand: gunicorn run:app
     envVars:
       - key: FLASK_APP
