@@ -3,6 +3,7 @@
 {% block page_title %}Accumulated Depreciation Schedule{% endblock %}
 
 {% block content %}
+{% set as_of_ym = (as_of.year, as_of.month) %}
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
   <form class="d-flex gap-2 align-items-center" method="get">
     <label class="text-muted small mb-0">As of:</label>
