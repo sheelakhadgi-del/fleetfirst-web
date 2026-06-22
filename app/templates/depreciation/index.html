@@ -51,7 +51,7 @@
   <div class="col-md-3">
     <div class="stat-card">
       <div class="stat-label">Monthly Depreciation</div>
-      <div class="stat-value" style="font-size:1.3rem">{{ schedule.totals.monthly | currency }}</div>
+      <div class="stat-value" style="font-size:1.3rem">{{ schedule.totals.by_month.get(as_of_ym, 0) | currency }}</div>
     </div>
   </div>
   <div class="col-md-3">
@@ -79,6 +79,7 @@
 {% else %}
 
 {% set months = schedule.months %}
+{% set as_of_ym = (as_of.year, as_of.month) %}
 
 <!-- 1504 Fixed Assets -->
 {% if schedule.rows_1504 %}
@@ -208,6 +209,25 @@
         </tr>
         {% endfor %}
       </tbody>
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="5">1950 Subtotal</td>
+          {% for ym in months %}
+          <td class="text-end">
+            {% set ns = namespace(total=0) %}
+            {% for row in schedule.rows_1950 %}{% set ns.total = ns.total + row.monthly_amounts.get(ym, 0) %}{% endfor %}
+            {{ ns.total | currency }}
+          </td>
+          {% endfor %}
+          <td class="text-end text-danger">
+            {{ schedule.rows_1950 | map(attribute='accumulated_depreciation') | sum | currency }}
+          </td>
+          <td class="text-end">
+            {{ schedule.rows_1950 | map(attribute='book_value') | sum | currency }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </div>
@@ -219,7 +239,7 @@
     <div class="row text-center">
       <div class="col">
         <div class="small text-muted">Total Monthly</div>
-        <div class="fw-bold">{{ schedule.totals.monthly | currency }}</div>
+        <div class="fw-bold">{{ schedule.totals.by_month.get(as_of_ym, 0) | currency }}</div>
       </div>
       <div class="col">
         <div class="small text-muted">Total Accumulated</div>
