@@ -107,8 +107,7 @@ def truck_schedule_row(truck, as_of_date=None):
     months = build_month_list(start.year, start.month, as_of_date.year, as_of_date.month)
     monthly_amounts = {}
     for y, m in months:
-        month_end = date(y, m, 28)  # use 28th to stay within month
-        monthly_amounts[(y, m)] = sum(accumulated_depr_at(p, month_end) for p in periods)
+        monthly_amounts[(y, m)] = sum(monthly_depr_for_month(p, y, m) for p in periods)
 
     # Current period stats
     active = next((p for p in reversed(periods) if not p.end_date), periods[-1])
