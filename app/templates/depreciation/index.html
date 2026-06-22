@@ -137,7 +137,9 @@
           <td colspan="5">1504 Subtotal</td>
           {% for ym in months %}
           <td class="text-end">
-            {{ schedule.rows_1504 | map(attribute='monthly_amounts') | map('get', ym, 0) | sum | currency }}
+            {% set ns = namespace(total=0) %}
+            {% for row in schedule.rows_1504 %}{% set ns.total = ns.total + row.monthly_amounts.get(ym, 0) %}{% endfor %}
+            {{ ns.total | currency }}
           </td>
           {% endfor %}
           <td class="text-end text-danger">
